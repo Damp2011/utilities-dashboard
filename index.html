@@ -11,6 +11,8 @@
   --bg1:#2b1055;
   --bg2:#0f766e;
   --cyan:#22d3ee;
+  --green:#22c55e;
+  --red:#ef4444;
   --text:#e5e7eb;
 }
 
@@ -23,79 +25,63 @@ body{
   color:var(--text);
 }
 
-.header{
-  text-align:center;
-  padding:40px 20px 10px;
-}
-
+.header{text-align:center;padding:40px 20px 10px}
 .header h1{
-  font-size:38px;
-  margin:0;
+  font-size:38px;margin:0;
   background:linear-gradient(90deg,#60a5fa,#a855f7,#22d3ee);
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
 }
-
-.header p{
-  opacity:.8;
-  margin-top:8px;
-}
+.header p{opacity:.8;margin-top:8px}
 
 /* Loader */
 #loadingIndicator{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  height:60vh;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;height:60vh
 }
-
 .spinner{
-  width:56px;
-  height:56px;
-  border:4px solid rgba(255,255,255,.15);
+  width:56px;height:56px;border:4px solid rgba(255,255,255,.15);
   border-top:4px solid var(--cyan);
-  border-radius:50%;
-  animation:spin 1s linear infinite;
+  border-radius:50%;animation:spin 1s linear infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loadingIndicator span{margin-top:18px;color:var(--cyan);font-size:18px}
+
+#errorContainer{display:none;text-align:center;padding:40px;color:var(--red)}
+
+#dashboard{display:none;padding:20px}
+
+/* Filters */
+.filters{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.filters select{
+  background:rgba(255,255,255,.12);
+  color:white;border:none;padding:10px 14px;
+  border-radius:10px
 }
 
-@keyframes spin{
-  to{transform:rotate(360deg)}
+/* KPIs */
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:16px;margin-bottom:30px
 }
-
-#loadingIndicator span{
-  margin-top:18px;
-  color:var(--cyan);
-  font-size:18px;
-}
-
-/* Error */
-#errorContainer{
-  display:none;
-  text-align:center;
-  padding:40px;
-  color:#f87171;
-  font-size:18px;
-}
-
-/* Dashboard */
-#dashboard{
-  display:none;
-  padding:20px;
-}
-
-.card{
+.kpi{
   background:rgba(255,255,255,.08);
-  border-radius:16px;
-  padding:20px;
-  margin-bottom:20px;
+  border-radius:16px;padding:18px
 }
+.kpi h4{margin:0;opacity:.8;font-size:14px}
+.kpi .value{font-size:28px;font-weight:600;margin-top:6px}
+.green{color:var(--green)} .red{color:var(--red)}
 
-pre{
-  white-space:pre-wrap;
-  word-break:break-word;
-  font-size:13px;
-  color:#a7f3d0;
+/* Charts */
+.charts{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(360px,1fr));
+  gap:24px
+}
+.chart-card{
+  background:rgba(255,255,255,.08);
+  border-radius:18px;padding:18px
 }
 </style>
 </head>
@@ -115,43 +101,120 @@ pre{
 <div id="errorContainer"></div>
 
 <div id="dashboard">
-  <div class="card">
-    <h3>CSV Data Preview (first rows)</h3>
-    <pre id="csvPreview"></pre>
+
+  <!-- Filters -->
+  <div class="filters">
+    <select id="monthFilter"></select>
+    <select id="projectFilter"></select>
   </div>
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi"><h4>Actual MWh</h4><div class="value" id="kpiMWh">–</div></div>
+    <div class="kpi"><h4>Act. PA (%)</h4><div class="value" id="kpiPA">–</div></div>
+    <div class="kpi"><h4>Act. GA (%)</h4><div class="value" id="kpiGA">–</div></div>
+    <div class="kpi"><h4>WC Achieved (%)</h4><div class="value" id="kpiWC">–</div></div>
+    <div class="kpi"><h4>GTI Achieved (%)</h4><div class="value" id="kpiGTI">–</div></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts">
+    <div class="chart-card"><canvas id="mwhChart"></canvas></div>
+    <div class="chart-card"><canvas id="paGaChart"></canvas></div>
+    <div class="chart-card"><canvas id="gtiWcChart"></canvas></div>
+  </div>
+
 </div>
 
 <script>
-/* ===============================
-   CSV LOAD (GITHUB PAGES SAFE)
-================================ */
+const CSV_URL="data.csv?v="+Date.now();
+let rawData=[], charts={};
 
-const CSV_URL = "data.csv?v=" + Date.now();
+fetch(CSV_URL,{cache:"no-store"})
+.then(r=>{if(!r.ok)throw Error("CSV not found");return r.text()})
+.then(csv=>{
+  rawData=parseCSV(csv);
+  initFilters();
+  updateDashboard();
+  loadingIndicator.style.display="none";
+  dashboard.style.display="block";
+})
+.catch(e=>{
+  loadingIndicator.style.display="none";
+  errorContainer.style.display="block";
+  errorContainer.textContent=e.message;
+});
 
-fetch(CSV_URL, { cache: "no-store" })
-  .then(res => {
-    if (!res.ok) throw new Error("CSV file not found");
-    return res.text();
-  })
-  .then(csv => {
-    console.log("CSV loaded successfully");
-
-    // Hide loader
-    document.getElementById("loadingIndicator").style.display = "none";
-    document.getElementById("dashboard").style.display = "block";
-
-    // Show preview
-    document.getElementById("csvPreview").textContent =
-      csv.split("\n").slice(0,10).join("\n");
-  })
-  .catch(err => {
-    console.error(err);
-    document.getElementById("loadingIndicator").style.display = "none";
-    const e = document.getElementById("errorContainer");
-    e.style.display = "block";
-    e.innerHTML = "❌ Failed to load data.csv<br><br>" + err.message;
+function parseCSV(t){
+  const [h,...r]=t.trim().split("\n");
+  const k=h.split(",");
+  return r.map(l=>{
+    const o={}; l.split(",").forEach((v,i)=>o[k[i]]=v); return o;
   });
-</script>
+}
 
+function initFilters(){
+  monthFilter.innerHTML='<option value="">All Months</option>'+
+    [...new Set(rawData.map(d=>d.Date))].map(m=>`<option>${m}</option>`).join("");
+  projectFilter.innerHTML='<option value="">All Projects</option>'+
+    [...new Set(rawData.map(d=>d["Project name"]))].map(p=>`<option>${p}</option>`).join("");
+  monthFilter.onchange=projectFilter.onchange=updateDashboard;
+}
+
+function updateDashboard(){
+  const m=monthFilter.value,p=projectFilter.value;
+  const d=rawData.filter(x=>(!m||x.Date===m)&&(!p||x["Project name"]===p));
+  if(!d.length)return;
+
+  avg=(k)=>d.reduce((s,x)=>s+parseFloat(x[k]||0),0)/d.length;
+  setKPI("kpiMWh",avg("Actual MWh").toFixed(0));
+  setKPI("kpiPA",avg("Act. PA (%)").toFixed(2)+"%",avg("Act. PA (%)"));
+  setKPI("kpiGA",avg("Act. GA (%)").toFixed(2)+"%",avg("Act. GA (%)"));
+  setKPI("kpiWC",avg("WC Achieved").toFixed(2)+"%",avg("WC Achieved"));
+  setKPI("kpiGTI",avg("GTI Achieved").toFixed(2)+"%",avg("GTI Achieved"));
+
+  renderCharts(d);
+}
+
+function setKPI(id,v,n){
+  const e=document.getElementById(id);
+  e.textContent=v; e.className="value";
+  if(n!==undefined && n<99.5) e.classList.add("red");
+  else if(n!==undefined) e.classList.add("green");
+}
+
+function renderCharts(d){
+  Object.values(charts).forEach(c=>c.destroy());
+
+  const labels=d.map(x=>x.Date);
+
+  charts.mwh=new Chart(mwhChart,{
+    type:"bar",
+    data:{labels,
+      datasets:[
+        {label:"Expected P50 MWh",data:d.map(x=>x["Expected P50 MWh"]),backgroundColor:"#60a5fa"},
+        {label:"Actual MWh",data:d.map(x=>x["Actual MWh"]),backgroundColor:"#22c55e"}
+      ]}
+  });
+
+  charts.paGa=new Chart(paGaChart,{
+    type:"line",
+    data:{labels,
+      datasets:[
+        {label:"Act. PA (%)",data:d.map(x=>x["Act. PA (%)"]),borderColor:"#22d3ee"},
+        {label:"Act. GA (%)",data:d.map(x=>x["Act. GA (%)"]),borderColor:"#a855f7"}
+      ]}
+  });
+
+  charts.gtiWc=new Chart(gtiWcChart,{
+    type:"line",
+    data:{labels,
+      datasets:[
+        {label:"GTI Achieved (%)",data:d.map(x=>x["GTI Achieved"]),borderColor:"#22c55e"},
+        {label:"WC Achieved (%)",data:d.map(x=>x["WC Achieved"]),borderColor:"#f59e0b"}
+      ]}
+  });
+}
+</script>
 </body>
 </html>
