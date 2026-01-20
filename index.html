@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Utilities Performance Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 body{
  margin:0;
@@ -35,11 +34,10 @@ select{
  background:rgba(255,255,255,.08);
  border-radius:18px;padding:16px
 }
-.card h3{margin:0 0 10px;font-size:15px}
+.card h3{margin:0 0 10px;font-size:15px;color:white;}
 canvas{height:260px}
 </style>
 </head>
-
 <body>
 
 <div class="header">
@@ -62,17 +60,25 @@ canvas{height:260px}
 
 <script>
 const charts={}, TH=99.5;
+
 fetch("data.csv?v="+Date.now()).then(r=>r.text()).then(t=>{
  const rows=t.trim().split("\n");
  const h=rows.shift().split(",");
  const data=rows.map(r=>{
-  const o={}; r.split(",").forEach((v,i)=>o[h[i]]=v); return o;
+   const o={};
+   r.split(",").forEach((v,i)=>{
+     const key=h[i];
+     // remove % and convert to number if possible
+     const num=v.replace('%','').trim();
+     o[key]=isNaN(num) ? v : parseFloat(num);
+   });
+   return o;
  });
 
  const years=[...new Set(data.map(d=>"20"+d.Date.split("-")[1]))];
  yearFilter.innerHTML='<option value="">All Years</option>'+years.map(y=>`<option>${y}</option>`).join("");
  projectFilter.innerHTML='<option value="">All Projects</option>'+
- [...new Set(data.map(d=>d["Project name"]))].map(p=>`<option>${p}</option>`).join("");
+   [...new Set(data.map(d=>d["Project name"]))].map(p=>`<option>${p}</option>`).join("");
 
  yearFilter.onchange=projectFilter.onchange=()=>render(data);
  render(data);
@@ -89,38 +95,70 @@ function render(raw){
  const m=[...new Set(f.map(d=>d.Date))];
  const sum=k=>m.map(M=>f.filter(d=>d.Date===M).reduce((s,x)=>s+(+x[k]||0),0));
  const avg=k=>m.map(M=>{
-  const a=f.filter(d=>d.Date===M).map(x=>+x[k]||0);
-  return a.reduce((s,v)=>s+v,0)/a.length;
+   const a=f.filter(d=>d.Date===M).map(x=>+x[k]||0);
+   return a.reduce((s,v)=>s+v,0)/a.length;
  });
 
- charts.c1=new Chart(c1,{type:"bar",data:{labels:m,datasets:[
-  {label:"Expected P50",data:sum("Expected P50 MWh")},
-  {label:"Actual",data:sum("Actual MWh")}
- ]}});
+ const commonOptions={
+   plugins:{legend:{labels:{color:"white"}}},
+   scales:{x:{ticks:{color:"white"}},y:{ticks:{color:"white"}}}
+ };
 
- charts.c2=new Chart(c2,{data:{labels:m,datasets:[
-  {type:"bar",label:"MWh",data:sum("Actual MWh"),yAxisID:"y"},
-  {type:"line",label:"GTI",data:avg("GTI Achieved"),yAxisID:"y1"}
- ]},
- options:{scales:{y:{beginAtZero:true},y1:{position:"right"}}}});
+ charts.c1=new Chart(c1,{
+   type:"bar",
+   data:{labels:m,datasets:[
+     {label:"Expected P50",data:sum("Expected P50 MWh"),backgroundColor:"#60a5fa"},
+     {label:"Actual",data:sum("Actual MWh"),backgroundColor:"#22d3ee"}
+   ]},
+   options:commonOptions
+ });
 
- charts.c3=new Chart(c3,{type:"line",data:{labels:m,datasets:[
-  {label:"WC Achieved",data:avg("WC Achieved")}
- ]}});
+ charts.c2=new Chart(c2,{
+   data:{labels:m,datasets:[
+     {type:"bar",label:"MWh",data:sum("Actual MWh"),yAxisID:"y",backgroundColor:"#facc15"},
+     {type:"line",label:"GTI",data:avg("Actual GTI"),yAxisID:"y1",borderColor:"#f87171",tension:0.3,fill:false,pointBackgroundColor:"#f87171"}
+   ]},
+   options:{
+     ...commonOptions,
+     scales:{y:{beginAtZero:true,ticks:{color:"white"}},y1:{position:"right",ticks:{color:"white"}}}
+   }
+ });
 
- charts.c4=new Chart(c4,{type:"line",data:{labels:m,datasets:[
-  {label:"WC_NOC",data:avg("WC_NOC")}
- ]}});
+ charts.c3=new Chart(c3,{
+   type:"line",
+   data:{labels:m,datasets:[
+     {label:"WC Achieved",data:avg("WC Achieved"),borderColor:"#22d3ee",tension:0.3,fill:false,pointBackgroundColor:"#22d3ee"}
+   ]},
+   options:commonOptions
+ });
 
- charts.c5=new Chart(c5,{type:"line",data:{labels:m,datasets:[
-  {label:"GA",data:avg("Act. GA (%)"),
-   pointBackgroundColor:avg("Act. GA (%)").map(v=>v<TH?"#ef4444":"#22d3ee")}
- ]}});
+ charts.c4=new Chart(c4,{
+   type:"line",
+   data:{labels:m,datasets:[
+     {label:"WC_NOC",data:avg("WC_NOC"),borderColor:"#a855f7",tension:0.3,fill:false,pointBackgroundColor:"#a855f7"}
+   ]},
+   options:commonOptions
+ });
 
- charts.c6=new Chart(c6,{type:"line",data:{labels:m,datasets:[
-  {label:"PA",data:avg("Act. PA (%)"),
-   pointBackgroundColor:avg("Act. PA (%)").map(v=>v<TH?"#ef4444":"#22d3ee")}
- ]}});
+ charts.c5=new Chart(c5,{
+   type:"line",
+   data:{labels:m,datasets:[
+     {label:"GA",data:avg("Act. GA (%)"),
+      borderColor:"#22d3ee",tension:0.3,fill:false,
+      pointBackgroundColor:avg("Act. GA (%)").map(v=>v<TH?"#ef4444":"#22d3ee")}
+   ]},
+   options:commonOptions
+ });
+
+ charts.c6=new Chart(c6,{
+   type:"line",
+   data:{labels:m,datasets:[
+     {label:"PA",data:avg("Act. PA (%)"),
+      borderColor:"#60a5fa",tension:0.3,fill:false,
+      pointBackgroundColor:avg("Act. PA (%)").map(v=>v<TH?"#ef4444":"#60a5fa")}
+   ]},
+   options:commonOptions
+ });
 }
 </script>
 </body>
