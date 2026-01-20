@@ -36,7 +36,7 @@ body{
   transition: background 0.5s, color 0.5s;
 }
 .kpi-card h4{margin:0;font-size:14px;color:#e5e7eb;}
-.kpi-card p{margin:5px 0 0;font-size:24px;font-weight:700;}
+.kpi-card p{margin:5px 0 0;font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;}
 .filters{
   display:flex;gap:14px;justify-content:center;margin-bottom:20px;
   flex-wrap:wrap;
@@ -75,7 +75,6 @@ canvas{height:280px}
   <h1>⚡ Utilities Performance Dashboard</h1>
 </div>
 
-<!-- KPI Panel -->
 <div class="kpi-panel">
   <div class="kpi-card" id="card-mwh">
     <h4>Total Actual MWh / Expected P50 MWh</h4>
@@ -107,9 +106,10 @@ const charts = {}, TH = 99.5;
 
 function createSlicer(container, options, callback){
   container.innerHTML = '';
-  options.forEach(opt=>{
+  options.forEach((opt,i)=>{
     const btn = document.createElement('button');
     btn.innerText = opt;
+    btn.classList.add('selected'); // preselect all options
     btn.onclick = ()=>{
       btn.classList.toggle('selected');
       callback();
@@ -125,7 +125,6 @@ function getGradient(ctx,color){
   return gradient;
 }
 
-// Fetch CSV
 fetch("data.csv?v="+Date.now()).then(r=>r.text()).then(t=>{
   const rows = t.trim().split("\n");
   const headers = rows.shift().split(",");
@@ -176,12 +175,13 @@ function render(raw){
     return a.reduce((s,v)=>s+v,0)/a.length;
   });
 
-  // KPI Panel with % deviation
+  // KPI Panel
   const totalActualMWh = filtered.reduce((s,x)=>s+(+x["Actual MWh"]||0),0);
   const totalExpectedP50 = filtered.reduce((s,x)=>s+(+x["Expected P50 MWh"]||0),0);
   const mwhDev = totalExpectedP50 ? ((totalActualMWh-totalExpectedP50)/totalExpectedP50*100).toFixed(1) : 0;
   const mwhKPI = document.getElementById('kpi-mwh');
-  mwhKPI.innerText = `${totalActualMWh.toLocaleString()} / ${totalExpectedP50.toLocaleString()} (${mwhDev>0?'+':''}${mwhDev}%)`;
+  const mwhArrow = mwhDev>=0?'▲':'▼';
+  mwhKPI.innerHTML = `${totalActualMWh.toLocaleString()} / ${totalExpectedP50.toLocaleString()} (${mwhDev>0?'+':''}${mwhDev}% ${mwhArrow})`;
   document.getElementById('card-mwh').style.backgroundColor = mwhDev>=0?'#064e3b':'#7f1d1d';
   mwhKPI.style.color = mwhDev>=0?'#22c55e':'#f87171';
 
@@ -189,108 +189,30 @@ function render(raw){
   const avgExpectedGTI = filtered.reduce((s,x)=>s+(+x["Expected GTI"]||0),0)/filtered.length || 0;
   const gtiDev = avgExpectedGTI ? ((avgActualGTI-avgExpectedGTI)/avgExpectedGTI*100).toFixed(1) : 0;
   const gtiKPI = document.getElementById('kpi-gti');
-  gtiKPI.innerText = `${avgActualGTI.toFixed(1)} / ${avgExpectedGTI.toFixed(1)} (${gtiDev>0?'+':''}${gtiDev}%)`;
+  const gtiArrow = gtiDev>=0?'▲':'▼';
+  gtiKPI.innerHTML = `${avgActualGTI.toFixed(1)} / ${avgExpectedGTI.toFixed(1)} (${gtiDev>0?'+':''}${gtiDev}% ${gtiArrow})`;
   document.getElementById('card-gti').style.backgroundColor = gtiDev>=0?'#064e3b':'#7f1d1d';
   gtiKPI.style.color = gtiDev>=0?'#22c55e':'#f87171';
 
   const commonOptions = {
-    plugins:{
-      legend:{labels:{color:"white"}},
-      tooltip:{enabled:true,backgroundColor:"#1f2937",titleColor:"white",bodyColor:"white"}
-    },
-    scales:{
-      x:{grid:{display:false}, ticks:{color:"white"}},
-      y:{grid:{display:false}, ticks:{color:"white"}}
-    }
+    plugins:{legend:{labels:{color:"white"}},tooltip:{enabled:true,backgroundColor:"#1f2937",titleColor:"white",bodyColor:"white"}},
+    scales:{x:{grid:{display:false},ticks:{color:"white"}},y:{grid:{display:false},ticks:{color:"white"}}}
   };
 
-  // Chart 1
-  charts.c1 = new Chart(c1,{
-    type:"bar",
-    data:{labels:months,datasets:[
-      {label:"Expected P50",data:sum("Expected P50 MWh"),backgroundColor:"#60a5fa",hoverBackgroundColor:"#22d3ee",borderRadius:4},
-      {label:"Actual",data:sum("Actual MWh"),backgroundColor:"#22d3ee",hoverBackgroundColor:"#60a5fa",borderRadius:4}
-    ]},
-    options:commonOptions
-  });
+  charts.c1 = new Chart(c1,{type:"bar",data:{labels:months,datasets:[{label:"Expected P50",data:sum("Expected P50 MWh"),backgroundColor:"#60a5fa",hoverBackgroundColor:"#22d3ee",borderRadius:4},{label:"Actual",data:sum("Actual MWh"),backgroundColor:"#22d3ee",hoverBackgroundColor:"#60a5fa",borderRadius:4}]},options:commonOptions});
 
-  // Chart 2 Actual GTI
-  const ctx2 = c2.getContext('2d');
-  charts.c2 = new Chart(c2,{
-    data:{
-      labels:months,
-      datasets:[
-        {type:"bar",label:"Actual MWh",data:sum("Actual MWh"),yAxisID:"y",backgroundColor:"#facc15",hoverBackgroundColor:"#fbbf24",borderRadius:4},
-        {type:"line",label:"Actual GTI",data:avg("Actual GTI"),yAxisID:"y1",borderColor:"#f472b6",
-         backgroundColor:getGradient(ctx2,'#f472b6'),tension:0.4,fill:true,pointBackgroundColor:"#f472b6",
-         pointHoverRadius:8,borderWidth:3,pointHoverBackgroundColor:"#fff",pointHoverBorderWidth:2,pointHoverBorderColor:"#f472b6"}
-      ]
-    },
-    options:{
-      plugins:{legend:{labels:{color:"white"}}},
-      scales:{
-        y:{beginAtZero:true,ticks:{color:"white"},grid:{display:false}},
-        y1:{position:"right",ticks:{color:"white"},grid:{display:false}},
-        x:{ticks:{color:"white"},grid:{display:false}}
-      },
-      interaction:{mode:'index', intersect:false}
-    }
-  });
+  const ctx2=c2.getContext('2d');
+  charts.c2=new Chart(c2,{data:{labels:months,datasets:[{type:"bar",label:"Actual MWh",data:sum("Actual MWh"),yAxisID:"y",backgroundColor:"#facc15",hoverBackgroundColor:"#fbbf24",borderRadius:4},{type:"line",label:"Actual GTI",data:avg("Actual GTI"),yAxisID:"y1",borderColor:"#f472b6",backgroundColor:getGradient(ctx2,'#f472b6'),tension:0.4,fill:true,pointBackgroundColor:"#f472b6",pointHoverRadius:8,borderWidth:3,pointHoverBackgroundColor:"#fff",pointHoverBorderWidth:2,pointHoverBorderColor:"#f472b6"}]},options:{plugins:{legend:{labels:{color:"white"}}},scales:{y:{beginAtZero:true,ticks:{color:"white"},grid:{display:false}},y1:{position:"right",ticks:{color:"white"},grid:{display:false}},x:{ticks:{color:"white"},grid:{display:false}}},interaction:{mode:'index',intersect:false}}});
 
-  // Chart 3 WC Achieved Delta
-  const ctx3 = c3.getContext('2d');
-  const wcDelta = delta100("WC Achieved");
-  charts.c3 = new Chart(c3,{
-    type:"line",
-    data:{labels:months,datasets:[{
-      label:"WC Achieved Δ",
-      data:wcDelta,
-      borderColor:"#22d3ee",
-      backgroundColor:getGradient(ctx3,"#22d3ee"),
-      pointBackgroundColor:wcDelta.map(v=>v>=0?"#22c55e":"#ef4444"),
-      pointHoverRadius:8,tension:0.4,fill:true,borderWidth:3
-    }]},
-    options:commonOptions
-  });
+  const ctx3=c3.getContext('2d'); const wcDelta=delta100("WC Achieved");
+  charts.c3=new Chart(c3,{type:"line",data:{labels:months,datasets:[{label:"WC Achieved Δ",data:wcDelta,borderColor:"#22d3ee",backgroundColor:getGradient(ctx3,"#22d3ee"),pointBackgroundColor:wcDelta.map(v=>v>=0?"#22c55e":"#ef4444"),pointHoverRadius:8,tension:0.4,fill:true,borderWidth:3} ]},options:commonOptions});
 
-  // Chart 4 WC_NOC Delta
-  const ctx4 = c4.getContext('2d');
-  const wcNocDelta = delta100("WC_NOC");
-  charts.c4 = new Chart(c4,{
-    type:"line",
-    data:{labels:months,datasets:[{
-      label:"WC_NOC Δ",
-      data:wcNocDelta,
-      borderColor:"#a855f7",
-      backgroundColor:getGradient(ctx4,"#a855f7"),
-      pointBackgroundColor:wcNocDelta.map(v=>v>=0?"#22c55e":"#ef4444"),
-      pointHoverRadius:8,tension:0.4,fill:true,borderWidth:3
-    }]},
-    options:commonOptions
-  });
+  const ctx4=c4.getContext('2d'); const wcNocDelta=delta100("WC_NOC");
+  charts.c4=new Chart(c4,{type:"line",data:{labels:months,datasets:[{label:"WC_NOC Δ",data:wcNocDelta,borderColor:"#a855f7",backgroundColor:getGradient(ctx4,"#a855f7"),pointBackgroundColor:wcNocDelta.map(v=>v>=0?"#22c55e":"#ef4444"),pointHoverRadius:8,tension:0.4,fill:true,borderWidth:3} ]},options:commonOptions});
 
-  // Chart 5 GA
-  charts.c5 = new Chart(c5,{
-    type:"line",
-    data:{labels:months,datasets:[
-      {label:"GA",data:avg("Act. GA (%)"),borderColor:"#22d3ee",tension:0.4,fill:false,
-       pointBackgroundColor:avg("Act. GA (%)").map(v=>v<TH?"#ef4444":"#22d3ee"),
-       pointHoverRadius:8,borderWidth:3}
-    ]},
-    options:commonOptions
-  });
+  charts.c5=new Chart(c5,{type:"line",data:{labels:months,datasets:[{label:"GA",data:avg("Act. GA (%)"),borderColor:"#22d3ee",tension:0.4,fill:false,pointBackgroundColor:avg("Act. GA (%)").map(v=>v<TH?"#ef4444":"#22d3ee"),pointHoverRadius:8,borderWidth:3} ]},options:commonOptions});
 
-  // Chart 6 PA
-  charts.c6 = new Chart(c6,{
-    type:"line",
-    data:{labels:months,datasets:[
-      {label:"PA",data:avg("Act. PA (%)"),borderColor:"#60a5fa",tension:0.4,fill:false,
-       pointBackgroundColor:avg("Act. PA (%)").map(v=>v<TH?"#ef4444":"#60a5fa"),
-       pointHoverRadius:8,borderWidth:3}
-    ]},
-    options:commonOptions
-  });
-
+  charts.c6=new Chart(c6,{type:"line",data:{labels:months,datasets:[{label:"PA",data:avg("Act. PA (%)"),borderColor:"#60a5fa",tension:0.4,fill:false,pointBackgroundColor:avg("Act. PA (%)").map(v=>v<TH?"#ef4444":"#60a5fa"),pointHoverRadius:8,borderWidth:3} ]},options:commonOptions});
 }
 </script>
 </body>
