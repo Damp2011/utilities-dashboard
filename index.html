@@ -95,8 +95,8 @@ canvas{height:280px}
 <div class="grid">
   <div class="card"><h3>Expected P50 vs Actual MWh</h3><canvas id="c1"></canvas></div>
   <div class="card"><h3>Actual MWh & GTI Comparison</h3><canvas id="c2"></canvas></div>
-  <div class="card"><h3>WC Achieved Delta</h3><canvas id="c3"></canvas></div>
-  <div class="card"><h3>WC_NOC Delta</h3><canvas id="c4"></canvas></div>
+  <div class="card"><h3>WC Achieved Δ</h3><canvas id="c3"></canvas></div>
+  <div class="card"><h3>WC_NOC Δ</h3><canvas id="c4"></canvas></div>
   <div class="card"><h3>Act. GA (%) – Threshold: 99.5%</h3><canvas id="c5"></canvas></div>
   <div class="card"><h3>Act. PA (%) – Threshold: 99.5%</h3><canvas id="c6"></canvas></div>
 </div>
@@ -105,26 +105,18 @@ canvas{height:280px}
 const charts = {}, TH = 99.5;
 const monthsList = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
+// Helper functions
 function createSlicer(container, options, callback){
   container.innerHTML = '';
   options.forEach(opt=>{
     const btn = document.createElement('button');
     btn.innerText = opt;
     btn.classList.add('selected'); // preselect all
-    btn.onclick = ()=>{
-      btn.classList.toggle('selected');
-      callback();
-    };
+    btn.onclick = ()=>{ btn.classList.toggle('selected'); callback(); };
     container.appendChild(btn);
   });
 }
-
-function getMonthName(dateStr){
-  const parts = dateStr.split("-");
-  const monthAbbr = parts[0];
-  return monthsList.find(m=>m===monthAbbr) || monthAbbr;
-}
-
+function getMonthName(dateStr){ return dateStr.split("-")[0]; }
 function getGradient(ctx,color){
   const gradient = ctx.createLinearGradient(0,0,0,ctx.canvas.height);
   gradient.addColorStop(0,color+'66');
@@ -140,15 +132,17 @@ fetch("data.csv?v="+Date.now()).then(r=>r.text()).then(t=>{
     const obj = {};
     r.split(",").forEach((v,i)=>{
       const key = headers[i];
-      const num = v.replace('%','').trim();
-      obj[key] = !isNaN(num) && num!=='' ? parseFloat(num) : v;
+      let val = v.trim();
+      if(val.endsWith('%')) val = parseFloat(val.replace('%',''));
+      else if(!isNaN(val) && val!=='') val = parseFloat(val);
+      obj[key] = val;
       obj['MonthName'] = getMonthName(obj['Date']);
     });
     return obj;
   });
 
   const allYears = [...new Set(data.map(d=>"20"+d.Date.split("-")[1]))];
-  const allMonths = monthsList; // always Jan–Dec
+  const allMonths = monthsList;
   const allProjects = [...new Set(data.map(d=>d["Project name"]))];
 
   createSlicer(yearFilter, allYears, ()=>render(data));
@@ -176,7 +170,7 @@ function render(raw){
 
   const sum = key => months.map(M=>filtered.filter(d=>d.MonthName===M).reduce((s,x)=>s+(+x[key]||0),0));
   const avg = key => months.map(M=>{
-    const a = filtered.filter(d=>d.MonthName===M).map(x=>+x[key]||0);
+    const a = filtered.filter(d=>d.MonthName===M).map(x=+x[key]||0);
     return a.reduce((s,v)=>s+v,0)/a.length;
   });
   const delta100 = key => months.map(M=>{
@@ -184,7 +178,7 @@ function render(raw){
     return a.reduce((s,v)=>s+v,0)/a.length;
   });
 
-  // KPI
+  // KPI Cards
   const totalActualMWh = filtered.reduce((s,x)=>s+(+x["Actual MWh"]||0),0);
   const totalExpectedP50 = filtered.reduce((s,x)=>s+(+x["Expected P50 MWh"]||0),0);
   const mwhDev = totalExpectedP50 ? ((totalActualMWh-totalExpectedP50)/totalExpectedP50*100).toFixed(1) : 0;
