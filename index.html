@@ -6,26 +6,45 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <style>
-/* ===== YOUR ORIGINAL CSS (UNCHANGED) ===== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-:root{
- --bg:#0B1437; --card:#151E3D; --card-hover:#1A2647;
- --text:#E8EAED; --muted:#8B92AB; --accent:#00D9FF;
- --accent2:#7C3AED; --success:#00F5A0; --danger:#FF4757;
- --warning:#FFA900; --border:#252E4A;
+
+body{
+ font-family:Inter;
+ background:#0B1437;
+ color:#E8EAED;
+ margin:0;
+ padding:20px;
 }
-body{font-family:Inter;background:#0B1437;color:var(--text);padding:20px;}
+.controls-container{
+ display:flex;
+ gap:10px;
+ margin-bottom:20px;
+}
+.dashboard{
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+ gap:20px;
+}
+.card{
+ background:#151E3D;
+ padding:15px;
+ border-radius:10px;
+}
 </style>
 </head>
 
 <body>
 
-<h1>⚡ Utilities Performance Dashboard</h1>
+<h2>⚡ Utilities Performance Dashboard</h2>
 
 <div class="controls-container">
- <select id="projectSelect"><option value="All">All Projects</option></select>
+ <select id="projectSelect">
+  <option value="All">All Projects</option>
+ </select>
+
  <select id="yearSelect" multiple size="4"></select>
 </div>
 
@@ -40,48 +59,39 @@ const CSV_URL =
 const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 let rawData=[],charts=[],selectedYears=[];
 
-function normalizeMonth(m){ return m.substring(0,3); }
+/* ===== LOAD CSV (ROBUST) ===== */
+Papa.parse(CSV_URL,{
+ download:true,
+ header:true,
+ skipEmptyLines:true,
+ complete:(res)=>{
+  rawData=res.data;
+  initFilters();
+  render();
+ }
+});
 
-/* ================= LOAD CSV ================= */
-fetch(CSV_URL,{cache:"no-store"})
- .then(r=>r.text())
- .then(loadCSV)
- .catch(e=>console.error(e));
-
+/* ===== FILTERS ===== */
 projectSelect.onchange=render;
 yearSelect.onchange=()=>{
  selectedYears=[...yearSelect.selectedOptions].map(o=>+o.value);
  render();
 };
 
-function loadCSV(text){
- const rows=text.trim().split("\n");
- const headers=rows[0].split(",");
-
- rawData=rows.slice(1).map(r=>{
-  const cols=r.split(",");
-  let o={};
-  headers.forEach((h,i)=>o[h.trim()]=cols[i]);
-  return o;
- });
-
- /* Projects */
+function initFilters(){
  [...new Set(rawData.map(d=>d["Project name"]))].forEach(p=>{
   projectSelect.innerHTML+=`<option>${p}</option>`;
  });
 
- /* Years */
  const years=[...new Set(
   rawData.map(d=>2000+Number(d["Date"].split("-")[1]))
  )].sort();
 
  yearSelect.innerHTML=years.map(y=>`<option selected>${y}</option>`).join("");
  selectedYears=years;
-
- render();
 }
 
-/* ================= RENDER ================= */
+/* ===== RENDER ===== */
 function render(){
  charts.forEach(c=>c.destroy());
  charts=[];
@@ -95,15 +105,18 @@ function render(){
  drawChart("Actual GTI","Actual GTI",data);
 }
 
+/* ===== CHART ===== */
 function drawChart(title,col,data){
  const datasets=[];
 
- selectedYears.forEach((yr,i)=>{
+ selectedYears.forEach(yr=>{
   const sum={},cnt={};
 
   data.forEach(d=>{
+   if(!d[col]) return;
+
    let [m,y]=d["Date"].split("-");
-   m=normalizeMonth(m);
+   m=m.substring(0,3);
    if(2000+Number(y)!==yr) return;
 
    const v=parseFloat(d[col]);
@@ -116,12 +129,13 @@ function drawChart(title,col,data){
   datasets.push({
    label:yr,
    data:months.map(m=>cnt[m]?sum[m]/cnt[m]:null),
-   borderWidth:3,
-   tension:.4
+   tension:.4,
+   borderWidth:3
   });
  });
 
  const card=document.createElement("div");
+ card.className="card";
  card.innerHTML=`<h3>${title}</h3><canvas></canvas>`;
  dashboard.appendChild(card);
 
