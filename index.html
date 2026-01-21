@@ -2,148 +2,154 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Utilities Performance Summary Dashboard</title>
+<title>Utilities Performance Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 body{
- font-family:Inter;
- background:#0B1437;
- color:#E8EAED;
- margin:0;
- padding:20px;
+  margin:0;
+  font-family:Inter,Segoe UI,Arial;
+  background:linear-gradient(135deg,#0b102e,#081a3a,#031b2f);
+  color:#fff;
 }
-.controls-container{
- display:flex;
- gap:10px;
- margin-bottom:20px;
+header{
+  text-align:center;
+  padding:30px 10px;
 }
-.dashboard{
- display:grid;
- grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
- gap:20px;
+header h1{
+  font-size:40px;
+  background:linear-gradient(90deg,#5ea1ff,#9b7bff);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
 }
-.card{
- background:#151E3D;
- padding:15px;
- border-radius:10px;
+header p{opacity:.8}
+
+.filter-panel{
+  margin:20px auto;
+  max-width:1100px;
+  background:#0f1b3d;
+  padding:20px;
+  border-radius:16px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
 }
+label{font-size:13px;color:#00eaff}
+select{
+  width:100%;
+  padding:8px;
+  border-radius:6px;
+}
+
+.chart-grid{
+  max-width:1200px;
+  margin:30px auto;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(350px,1fr));
+  gap:24px;
+}
+.chart-card{
+  background:#0e1736;
+  padding:15px;
+  border-radius:16px;
+}
+canvas{height:300px!important}
 </style>
 </head>
 
 <body>
 
-<h2>⚡ Utilities Performance Dashboard</h2>
+<header>
+  <h1>⚡ Utilities Performance Dashboard</h1>
+  <p>Real-time Performance Monitoring & Analytics</p>
+</header>
 
-<div class="controls-container">
- <select id="projectSelect">
-  <option value="All">All Projects</option>
- </select>
-
- <select id="yearSelect" multiple size="4"></select>
+<div class="filter-panel">
+  <div>
+    <label>PROJECT FILTER</label>
+    <select id="projectSelect"></select>
+  </div>
+  <div>
+    <label>YEAR SELECTION</label>
+    <select id="yearSelect" multiple size="3"></select>
+  </div>
 </div>
 
-<div id="dashboard" class="dashboard"></div>
+<div class="chart-grid">
+  <div class="chart-card"><canvas id="mwhChart"></canvas></div>
+  <div class="chart-card"><canvas id="gtiChart"></canvas></div>
+</div>
 
 <script>
-Chart.register(ChartDataLabels);
-
 const CSV_URL =
- "https://raw.githubusercontent.com/Damp2011/utilities-dashboard/main/data.csv";
+"https://raw.githubusercontent.com/Damp2011/utilities-dashboard/main/data.csv";
 
-const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-let rawData=[],charts=[],selectedYears=[];
+let rawData=[], charts=[];
 
-/* ===== LOAD CSV (ROBUST) ===== */
-Papa.parse(CSV_URL,{
- download:true,
- header:true,
- skipEmptyLines:true,
- complete:(res)=>{
-  rawData=res.data;
-  initFilters();
-  render();
- }
-});
+fetch(CSV_URL)
+.then(r=>r.text())
+.then(parseCSV)
+.then(initFilters)
+.then(renderCharts)
+.catch(e=>alert("CSV load failed"));
 
-/* ===== FILTERS ===== */
-projectSelect.onchange=render;
-yearSelect.onchange=()=>{
- selectedYears=[...yearSelect.selectedOptions].map(o=>+o.value);
- render();
-};
+function parseCSV(text){
+  const rows=text.trim().split("\n").map(r=>r.split(","));
+  const h=rows.shift();
+  rawData=rows.map(r=>{
+    let o={};
+    h.forEach((k,i)=>o[k.trim()]=r[i]?.trim());
+    o.Year=new Date(o.Date||"").getFullYear();
+    o.Month=new Date(o.Date||"").getMonth();
+    return o;
+  });
+}
 
 function initFilters(){
- [...new Set(rawData.map(d=>d["Project name"]))].forEach(p=>{
-  projectSelect.innerHTML+=`<option>${p}</option>`;
- });
+  const proj=[...new Set(rawData.map(d=>d["Project name"]))];
+  projectSelect.innerHTML='<option>All</option>'+proj.map(p=>`<option>${p}</option>`).join("");
 
- const years=[...new Set(
-  rawData.map(d=>2000+Number(d["Date"].split("-")[1]))
- )].sort();
+  const yrs=[...new Set(rawData.map(d=>d.Year))].sort();
+  yearSelect.innerHTML=yrs.map(y=>`<option selected>${y}</option>`).join("");
 
- yearSelect.innerHTML=years.map(y=>`<option selected>${y}</option>`).join("");
- selectedYears=years;
+  projectSelect.onchange=renderCharts;
+  yearSelect.onchange=renderCharts;
 }
 
-/* ===== RENDER ===== */
-function render(){
- charts.forEach(c=>c.destroy());
- charts=[];
- dashboard.innerHTML="";
-
- const proj=projectSelect.value;
- const data=proj==="All"?rawData:rawData.filter(d=>d["Project name"]===proj);
-
- drawChart("Actual MWh","Actual MWh",data);
- drawChart("Expected P50 MWh","Expected P50 MWh",data);
- drawChart("Actual GTI","Actual GTI",data);
+function getFiltered(){
+  const p=projectSelect.value;
+  const ys=[...yearSelect.selectedOptions].map(o=>+o.value);
+  return rawData.filter(d=>
+    (p==="All"||d["Project name"]===p)&&ys.includes(d.Year)
+  );
 }
 
-/* ===== CHART ===== */
-function drawChart(title,col,data){
- const datasets=[];
+function renderCharts(){
+  charts.forEach(c=>c.destroy()); charts=[];
+  const data=getFiltered();
+  if(!data.length) return;
 
- selectedYears.forEach(yr=>{
-  const sum={},cnt={};
+  const months=[...Array(12).keys()].map(m=>new Date(0,m).toLocaleString("en",{month:"short"}));
 
-  data.forEach(d=>{
-   if(!d[col]) return;
+  const mwh=months.map((_,m)=>data.filter(d=>d.Month===m)
+      .reduce((a,b)=>a+(+b["Actual MWh"]||0),0));
 
-   let [m,y]=d["Date"].split("-");
-   m=m.substring(0,3);
-   if(2000+Number(y)!==yr) return;
+  const gti=months.map((_,m)=>data.filter(d=>d.Month===m)
+      .reduce((a,b)=>a+(+b["Actual GTI"]||0),0));
 
-   const v=parseFloat(d[col]);
-   if(!isNaN(v)){
-    sum[m]=(sum[m]||0)+v;
-    cnt[m]=(cnt[m]||0)+1;
-   }
-  });
+  charts.push(new Chart(mwhChart,{
+    type:"bar",
+    data:{labels:months,datasets:[{label:"Actual MWh",data:mwh}]},
+    options:{responsive:true}
+  }));
 
-  datasets.push({
-   label:yr,
-   data:months.map(m=>cnt[m]?sum[m]/cnt[m]:null),
-   tension:.4,
-   borderWidth:3
-  });
- });
-
- const card=document.createElement("div");
- card.className="card";
- card.innerHTML=`<h3>${title}</h3><canvas></canvas>`;
- dashboard.appendChild(card);
-
- charts.push(new Chart(card.querySelector("canvas"),{
-  type:"line",
-  data:{labels:months,datasets},
-  options:{responsive:true}
- }));
+  charts.push(new Chart(gtiChart,{
+    type:"line",
+    data:{labels:months,datasets:[{label:"Actual GTI",data:gti,tension:.4}]},
+    options:{responsive:true}
+  }));
 }
 </script>
 
