@@ -1,44 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>Utilities Performance Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <style>
-:root{
- --bg:#0b1220;
- --card:#111a2e;
- --text:#e8eefc;
- --accent:#00d9ff;
-}
-
 body{
  margin:0;
- font-family:Inter,Segoe UI,Arial;
- background:var(--bg);
- color:var(--text);
+ font-family: Inter, Segoe UI, Arial;
+ background: linear-gradient(135deg,#0b1220,#08101a);
+ color:#eaf6ff;
 }
 
 header{
- padding:16px 20px;
- font-size:20px;
+ padding:20px 30px;
+ font-size:22px;
  font-weight:600;
- background:#0f1830;
- border-bottom:1px solid #1f2a44;
+ border-bottom:1px solid rgba(255,255,255,.1);
 }
 
-/* ===== FILTER BAR ===== */
 .filters{
  display:flex;
  gap:20px;
- padding:16px;
- background:#0f1830;
+ padding:20px 30px;
 }
 
-.filter{
+.filter-box{
  display:flex;
  flex-direction:column;
  gap:6px;
@@ -46,41 +37,37 @@ header{
 
 label{
  font-size:13px;
- opacity:.8;
-}
-
-/* IMPORTANT: visible multi-select */
-select{
- background:#111a2e;
- color:var(--text);
- border:2px solid var(--accent);
- border-radius:8px;
- padding:6px;
- width:180px;
- font-size:14px;
+ opacity:.9;
 }
 
 select[multiple]{
- height:140px;
- box-shadow:0 0 0 3px rgba(0,217,255,.15);
+ min-width:180px;
+ min-height:120px;
+ background:#0f1a2b;
+ color:#eaf6ff;
+ border:2px solid #00e5ff;
+ border-radius:8px;
+ padding:6px;
+ outline:none;
 }
 
-/* ===== DASHBOARD ===== */
 .dashboard{
  display:grid;
- grid-template-columns:repeat(auto-fit,minmax(350px,1fr));
+ grid-template-columns:1fr 1fr;
  gap:20px;
- padding:20px;
+ padding:20px 30px;
 }
 
 .card{
- background:var(--card);
- border-radius:14px;
- padding:14px;
+ background:linear-gradient(180deg,#101b2f,#0b1424);
+ border-radius:16px;
+ padding:16px;
+ box-shadow:0 20px 50px rgba(0,0,0,.4);
 }
 
 canvas{
- height:260px !important;
+ width:100%!important;
+ height:300px!important;
 }
 </style>
 </head>
@@ -89,119 +76,140 @@ canvas{
 
 <header>Utilities Performance Dashboard</header>
 
-<!-- ===== FILTERS ===== -->
 <div class="filters">
-
- <div class="filter">
+ <div class="filter-box">
   <label>Year (Multi-Select)</label>
   <select id="yearSelect" multiple></select>
  </div>
 
- <div class="filter">
+ <div class="filter-box">
   <label>Project (Multi-Select)</label>
   <select id="projectSelect" multiple></select>
  </div>
-
 </div>
 
-<!-- ===== CHARTS ===== -->
 <div class="dashboard">
- <div class="card"><canvas id="gtiChart"></canvas></div>
- <div class="card"><canvas id="mwhChart"></canvas></div>
+ <div class="card">
+  <canvas id="gtiChart"></canvas>
+ </div>
+ <div class="card">
+  <canvas id="mwhChart"></canvas>
+ </div>
 </div>
 
 <script>
-const dataURL = "https://damp2011.github.io/utilities-dashboard/data.csv";
+let rawData=[];
+let selectedYears=[];
+let selectedProjects=[];
+let gtiChart,mwhChart;
 
-let rawData = [];
-let selectedYears = [];
-let selectedProjects = [];
+const yearSelect=document.getElementById("yearSelect");
+const projectSelect=document.getElementById("projectSelect");
 
-let gtiChart, mwhChart;
-
-/* ===== LOAD CSV ===== */
-fetch(dataURL)
- .then(r => r.text())
- .then(text => {
-  const rows = text.trim().split("\n").map(r => r.split(","));
-  const h = rows.shift();
-
-  rawData = rows.map(r=>{
-   let o={};
-   h.forEach((k,i)=>o[k.trim()] = r[i]?.trim());
-   return o;
+/* -------- MULTI-CLICK (NO CTRL) -------- */
+function enableClickMultiSelect(select){
+ [...select.options].forEach(opt=>{
+  opt.addEventListener("mousedown",e=>{
+   e.preventDefault();
+   opt.selected=!opt.selected;
+   select.dispatchEvent(new Event("change"));
   });
-
-  initFilters();
-  renderCharts();
  });
+}
 
-/* ===== INIT FILTERS ===== */
-function initFilters(){
- const years = [...new Set(rawData.map(d=>d.Date.split("-")[1]))];
- const projects = [...new Set(rawData.map(d=>d["Project name"]))];
+/* -------- FILTER DATA -------- */
+function getFilteredData(){
+ return rawData.filter(d=>{
+  if(!d.Date || !d["Project name"]) return false;
+  const year=d.Date.trim().slice(-2);
+  return (
+   (selectedYears.length===0 || selectedYears.includes(year)) &&
+   (selectedProjects.length===0 || selectedProjects.includes(d["Project name"]))
+  );
+ });
+}
 
- yearSelect.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join("");
- projectSelect.innerHTML = projects.map(p=>`<option value="${p}">${p}</option>`).join("");
+/* -------- POPULATE FILTERS -------- */
+function populateFilters(){
+ const years=[...new Set(
+  rawData.filter(d=>d.Date).map(d=>d.Date.trim().slice(-2))
+ )].sort();
+
+ const projects=[...new Set(
+  rawData.map(d=>d["Project name"]).filter(Boolean)
+ )].sort();
+
+ yearSelect.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join("");
+ projectSelect.innerHTML=projects.map(p=>`<option value="${p}">${p}</option>`).join("");
 
  enableClickMultiSelect(yearSelect);
  enableClickMultiSelect(projectSelect);
 }
 
-/* ===== CLICK MULTI-SELECT (NO CTRL) ===== */
-function enableClickMultiSelect(sel){
- [...sel.options].forEach(o=>{
-  o.addEventListener("mousedown",e=>{
-   e.preventDefault();
-   o.selected = !o.selected;
-   sel.dispatchEvent(new Event("change"));
-  });
- });
-}
+/* -------- RENDER CHARTS -------- */
+function render(){
+ const data=getFilteredData();
 
-/* ===== FILTER EVENTS ===== */
-yearSelect.onchange = ()=>{
- selectedYears = [...yearSelect.selectedOptions].map(o=>o.value);
- renderCharts();
-};
+ const labels=data.map(d=>d.Date);
 
-projectSelect.onchange = ()=>{
- selectedProjects = [...projectSelect.selectedOptions].map(o=>o.value);
- renderCharts();
-};
-
-/* ===== FILTER DATA ===== */
-function getFilteredData(){
- return rawData.filter(d=>{
-  const y = d.Date.split("-")[1];
-  return (selectedYears.length===0 || selectedYears.includes(y)) &&
-         (selectedProjects.length===0 || selectedProjects.includes(d["Project name"]));
- });
-}
-
-/* ===== RENDER CHARTS ===== */
-function renderCharts(){
- const d = getFilteredData();
-
- const labels = d.map(x=>x["Project name"]);
- const gti = d.map(x=>+x["Actual GTI"]);
- const mwh = d.map(x=>+x["Actual MWh"]);
+ const actualGTI=data.map(d=>+d["Actual GTI"]||0);
+ const actualMWh=data.map(d=>+d["Actual MWh"]||0);
+ const p50=data.map(d=>+d["Expected P50 MWh"]||0);
+ const p90=data.map(d=>+d["Expected P90 MWh"]||0);
 
  if(gtiChart) gtiChart.destroy();
  if(mwhChart) mwhChart.destroy();
 
- gtiChart = new Chart(document.getElementById("gtiChart"),{
-  type:"bar",
-  data:{labels,
-   datasets:[{label:"Actual GTI",data:gti}]}
+ gtiChart=new Chart(document.getElementById("gtiChart"),{
+  type:"line",
+  data:{
+   labels,
+   datasets:[{
+    label:"Actual GTI",
+    data:actualGTI,
+    borderWidth:3,
+    tension:.35
+   }]
+  },
+  options:{responsive:true,plugins:{legend:{labels:{color:"#eaf6ff"}}}}
  });
 
- mwhChart = new Chart(document.getElementById("mwhChart"),{
+ mwhChart=new Chart(document.getElementById("mwhChart"),{
   type:"bar",
-  data:{labels,
-   datasets:[{label:"Actual MWh",data:mwh}]}
+  data:{
+   labels,
+   datasets:[
+    {label:"Actual MWh",data:actualMWh},
+    {label:"Expected P50",data:p50},
+    {label:"Expected P90",data:p90}
+   ]
+  },
+  options:{responsive:true,plugins:{legend:{labels:{color:"#eaf6ff"}}}}
  });
 }
+
+/* -------- EVENTS -------- */
+yearSelect.onchange=()=>{
+ selectedYears=[...yearSelect.selectedOptions].map(o=>o.value);
+ render();
+};
+
+projectSelect.onchange=()=>{
+ selectedProjects=[...projectSelect.selectedOptions].map(o=>o.value);
+ render();
+};
+
+/* -------- LOAD CSV -------- */
+Papa.parse("data.csv",{
+ download:true,
+ header:true,
+ skipEmptyLines:true,
+ complete:(res)=>{
+  rawData=res.data;
+  populateFilters();
+  render();
+ }
+});
 </script>
 
 </body>
