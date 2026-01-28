@@ -3,316 +3,204 @@
 <head>
 <meta charset="UTF-8">
 <title>Utilities Performance Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 :root{
- --bg:#050814;
- --card:#0D1525;
- --text:#F0F4F8;
- --muted:#7C8BA1;
- --accent:#00E5FF;
- --accent2:#9D4EDD;
- --accent3:#06FFA5;
- --border:#1A2332;
+ --bg:#0b1220;
+ --card:#111a2e;
+ --text:#e8eefc;
+ --accent:#00d9ff;
 }
-
-*{box-sizing:border-box}
 
 body{
- font-family:Inter,Arial;
- background:radial-gradient(circle at 15% 20%, rgba(157,78,221,.35), transparent 40%),
-            radial-gradient(circle at 85% 80%, rgba(0,229,255,.35), transparent 40%),
-            var(--bg);
+ margin:0;
+ font-family:Inter,Segoe UI,Arial;
+ background:var(--bg);
  color:var(--text);
- padding:20px;
 }
 
-.header{text-align:center;margin-bottom:30px}
-h1{
- font-size:2.6rem;
- background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));
- -webkit-background-clip:text;
- -webkit-text-fill-color:transparent;
+header{
+ padding:16px 20px;
+ font-size:20px;
+ font-weight:600;
+ background:#0f1830;
+ border-bottom:1px solid #1f2a44;
 }
 
-.subtitle{color:var(--muted)}
-
-.controls-container{
- max-width:1400px;
- margin:0 auto 30px;
- background:var(--card);
- padding:20px;
- border-radius:16px;
- border:1px solid var(--border);
-}
-
-.controls{
- display:grid;
- grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+/* ===== FILTER BAR ===== */
+.filters{
+ display:flex;
  gap:20px;
+ padding:16px;
+ background:#0f1830;
 }
 
-.control-group{display:flex;flex-direction:column;gap:8px}
+.filter{
+ display:flex;
+ flex-direction:column;
+ gap:6px;
+}
 
 label{
- color:var(--accent);
- font-size:.75rem;
- font-weight:700;
- text-transform:uppercase;
+ font-size:13px;
+ opacity:.8;
 }
 
+/* IMPORTANT: visible multi-select */
 select{
- background:#111b2e;
- color:#fff;
- border:2px solid var(--border);
- border-radius:10px;
- padding:10px;
- cursor:pointer;
+ background:#111a2e;
+ color:var(--text);
+ border:2px solid var(--accent);
+ border-radius:8px;
+ padding:6px;
+ width:180px;
+ font-size:14px;
 }
 
 select[multiple]{
- min-height:130px;
- border-color:var(--accent);
+ height:140px;
+ box-shadow:0 0 0 3px rgba(0,217,255,.15);
 }
 
+/* ===== DASHBOARD ===== */
 .dashboard{
- max-width:1600px;
- margin:auto;
  display:grid;
- grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
- gap:24px;
+ grid-template-columns:repeat(auto-fit,minmax(350px,1fr));
+ gap:20px;
+ padding:20px;
 }
 
 .card{
- background:linear-gradient(135deg,#0d1525,#111b2e);
- padding:20px;
- border-radius:18px;
- border:1px solid var(--border);
+ background:var(--card);
+ border-radius:14px;
+ padding:14px;
 }
 
-.card h3{
- margin-bottom:15px;
- font-size:1.05rem;
+canvas{
+ height:260px !important;
 }
-
-canvas{height:320px !important}
 </style>
 </head>
 
 <body>
 
-<div class="header">
- <h1>⚡ Utilities Performance Dashboard</h1>
- <p class="subtitle">Real-time Performance Monitoring & Analytics</p>
-</div>
+<header>Utilities Performance Dashboard</header>
 
-<div class="controls-container">
- <div class="controls">
-  <div class="control-group">
-   <label>Project (Multi-Select)</label>
-   <select id="projectSelect" multiple></select>
-  </div>
+<!-- ===== FILTERS ===== -->
+<div class="filters">
 
-  <div class="control-group">
-   <label>Year (Multi-Select)</label>
-   <select id="yearSelect" multiple></select>
-  </div>
+ <div class="filter">
+  <label>Year (Multi-Select)</label>
+  <select id="yearSelect" multiple></select>
  </div>
+
+ <div class="filter">
+  <label>Project (Multi-Select)</label>
+  <select id="projectSelect" multiple></select>
+ </div>
+
 </div>
 
-<div id="dashboard" class="dashboard"></div>
+<!-- ===== CHARTS ===== -->
+<div class="dashboard">
+ <div class="card"><canvas id="gtiChart"></canvas></div>
+ <div class="card"><canvas id="mwhChart"></canvas></div>
+</div>
 
 <script>
-Chart.register(ChartDataLabels);
-Chart.defaults.font.family = "Inter";
+const dataURL = "https://damp2011.github.io/utilities-dashboard/data.csv";
 
-const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const colors=["#00E5FF","#9D4EDD","#06FFA5","#FFB800","#FF3B6D","#6366F1"];
+let rawData = [];
+let selectedYears = [];
+let selectedProjects = [];
 
-let rawData=[],charts=[];
-let selectedYears=[],selectedProjects=[];
+let gtiChart, mwhChart;
 
-/* ---------- CSV SAFE PARSER ---------- */
-function parseCSV(text){
- const rows=text.trim().split("\n");
- const headers=rows[0].split(",").map(h=>h.trim());
- return rows.slice(1).map(r=>{
-  const vals=r.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-  let o={};
-  headers.forEach((h,i)=>{
-   let v=vals[i]||"";
-   o[h]=v.replace(/^"|"$/g,"").trim();
+/* ===== LOAD CSV ===== */
+fetch(dataURL)
+ .then(r => r.text())
+ .then(text => {
+  const rows = text.trim().split("\n").map(r => r.split(","));
+  const h = rows.shift();
+
+  rawData = rows.map(r=>{
+   let o={};
+   h.forEach((k,i)=>o[k.trim()] = r[i]?.trim());
+   return o;
   });
-  return o;
+
+  initFilters();
+  renderCharts();
  });
+
+/* ===== INIT FILTERS ===== */
+function initFilters(){
+ const years = [...new Set(rawData.map(d=>d.Date.split("-")[1]))];
+ const projects = [...new Set(rawData.map(d=>d["Project name"]))];
+
+ yearSelect.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join("");
+ projectSelect.innerHTML = projects.map(p=>`<option value="${p}">${p}</option>`).join("");
+
+ enableClickMultiSelect(yearSelect);
+ enableClickMultiSelect(projectSelect);
 }
 
-/* ---------- LOAD CSV ---------- */
-fetch("data.csv")
- .then(r=>r.text())
- .then(t=>{
-  rawData=parseCSV(t);
-  initFilters();
-  render();
- });
-
-/* ---------- MULTI-CLICK ENABLE ---------- */
+/* ===== CLICK MULTI-SELECT (NO CTRL) ===== */
 function enableClickMultiSelect(sel){
  [...sel.options].forEach(o=>{
   o.addEventListener("mousedown",e=>{
    e.preventDefault();
-   o.selected=!o.selected;
+   o.selected = !o.selected;
    sel.dispatchEvent(new Event("change"));
   });
  });
 }
 
-/* ---------- INIT FILTERS ---------- */
-function initFilters(){
- projectSelect.innerHTML="";
- [...new Set(rawData.map(d=>d["Project name"]))].forEach(p=>{
-  projectSelect.innerHTML+=`<option value="${p}" selected>${p}</option>`;
- });
-
- yearSelect.innerHTML="";
- [...new Set(rawData.map(d=>parseInt(d["Date"].match(/\d{2,4}$/)[0])))]
-  .sort()
-  .forEach(y=>{
-   yearSelect.innerHTML+=`<option value="${y}" selected>${y}</option>`;
- });
-
- selectedProjects=[...projectSelect.options].map(o=>o.value);
- selectedYears=[...yearSelect.options].map(o=>+o.value);
-
- enableClickMultiSelect(projectSelect);
- enableClickMultiSelect(yearSelect);
-}
-
-projectSelect.onchange=()=>{
- selectedProjects=[...projectSelect.selectedOptions].map(o=>o.value);
- render();
+/* ===== FILTER EVENTS ===== */
+yearSelect.onchange = ()=>{
+ selectedYears = [...yearSelect.selectedOptions].map(o=>o.value);
+ renderCharts();
 };
 
-yearSelect.onchange=()=>{
- selectedYears=[...yearSelect.selectedOptions].map(o=>+o.value);
- render();
+projectSelect.onchange = ()=>{
+ selectedProjects = [...projectSelect.selectedOptions].map(o=>o.value);
+ renderCharts();
 };
 
-/* ---------- RENDER ---------- */
-function render(){
- charts.forEach(c=>c.destroy());
- charts=[];
- dashboard.innerHTML="";
+/* ===== FILTER DATA ===== */
+function getFilteredData(){
+ return rawData.filter(d=>{
+  const y = d.Date.split("-")[1];
+  return (selectedYears.length===0 || selectedYears.includes(y)) &&
+         (selectedProjects.length===0 || selectedProjects.includes(d["Project name"]));
+ });
+}
 
- const data=rawData.filter(d=>{
-  const y=parseInt(d["Date"].match(/\d{2,4}$/)[0]);
-  return selectedYears.includes(y) &&
-         selectedProjects.includes(d["Project name"]);
+/* ===== RENDER CHARTS ===== */
+function renderCharts(){
+ const d = getFilteredData();
+
+ const labels = d.map(x=>x["Project name"]);
+ const gti = d.map(x=>+x["Actual GTI"]);
+ const mwh = d.map(x=>+x["Actual MWh"]);
+
+ if(gtiChart) gtiChart.destroy();
+ if(mwhChart) mwhChart.destroy();
+
+ gtiChart = new Chart(document.getElementById("gtiChart"),{
+  type:"bar",
+  data:{labels,
+   datasets:[{label:"Actual GTI",data:gti}]}
  });
 
- expectedVsActual(data);
- actualVsGTI(data);
-}
-
-/* ---------- CHARTS ---------- */
-function expectedVsActual(data){
- const datasets=[];
- selectedYears.forEach((yr,i)=>{
-  let p50={},act={};
-  data.forEach(d=>{
-   const [m,y]=d["Date"].split("-");
-   if(+("20"+y)!==yr)return;
-   p50[m]=(p50[m]||0)+(+d["Expected P50 MWh"]||0);
-   act[m]=(act[m]||0)+(+d["Actual MWh"]||0);
-  });
-
-  datasets.push({
-   label:`P50 ${yr}`,
-   data:months.map(m=>p50[m]||null),
-   backgroundColor:colors[i%colors.length]+"88"
-  });
-
-  datasets.push({
-   label:`Actual ${yr}`,
-   data:months.map(m=>act[m]||null),
-   backgroundColor:colors[i%colors.length]
-  });
+ mwhChart = new Chart(document.getElementById("mwhChart"),{
+  type:"bar",
+  data:{labels,
+   datasets:[{label:"Actual MWh",data:mwh}]}
  });
-
- addChart("Expected P50 vs Actual MWh","bar",datasets);
-}
-
-function actualVsGTI(data){
- const bar=[],line=[];
- selectedYears.forEach((yr,i)=>{
-  let mwh={},gti={},cnt={};
-  data.forEach(d=>{
-   const [m,y]=d["Date"].split("-");
-   if(+("20"+y)!==yr)return;
-   mwh[m]=(mwh[m]||0)+(+d["Actual MWh"]||0);
-   if(d["Actual GTI"]){
-    gti[m]=(gti[m]||0)+(+d["Actual GTI"]);
-    cnt[m]=(cnt[m]||0)+1;
-   }
-  });
-
-  bar.push({
-   label:`MWh ${yr}`,
-   data:months.map(m=>mwh[m]||null),
-   backgroundColor:colors[i%colors.length]
-  });
-
-  line.push({
-   label:`GTI ${yr}`,
-   data:months.map(m=>cnt[m]?gti[m]/cnt[m]:null),
-   borderColor:colors[i%colors.length],
-   yAxisID:"y1",
-   tension:.4
-  });
- });
-
- addDualChart("Actual MWh & GTI",bar,line);
-}
-
-/* ---------- HELPERS ---------- */
-function addChart(title,type,datasets){
- const c=document.createElement("div");
- c.className="card";
- c.innerHTML=`<h3>${title}</h3><canvas></canvas>`;
- dashboard.appendChild(c);
-
- charts.push(new Chart(c.querySelector("canvas"),{
-  type,
-  data:{labels:months,datasets},
-  options:{responsive:true,maintainAspectRatio:false}
- }));
-}
-
-function addDualChart(title,bars,lines){
- const c=document.createElement("div");
- c.className="card";
- c.innerHTML=`<h3>${title}</h3><canvas></canvas>`;
- dashboard.appendChild(c);
-
- charts.push(new Chart(c.querySelector("canvas"),{
-  data:{labels:months,datasets:[
-   ...bars.map(b=>({...b,type:"bar",yAxisID:"y"})),
-   ...lines.map(l=>({...l,type:"line"}))
-  ]},
-  options:{
-   responsive:true,
-   maintainAspectRatio:false,
-   scales:{
-    y:{position:"left"},
-    y1:{position:"right",grid:{drawOnChartArea:false}}
-   }
-  }
- }));
 }
 </script>
 
