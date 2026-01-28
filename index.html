@@ -2,295 +2,110 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Utilities Performance Summary Dashboard</title>
+<title>Utilities Performance Dashboard</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root{
  --bg:#050814;
  --card:#0D1525;
- --card-hover:#111B2E;
  --text:#F0F4F8;
  --muted:#7C8BA1;
  --accent:#00E5FF;
  --accent2:#9D4EDD;
  --accent3:#06FFA5;
- --success:#06FFA5;
- --danger:#FF3B6D;
- --warning:#FFB800;
  --border:#1A2332;
- --glow-cyan:rgba(0, 229, 255, 0.4);
- --glow-purple:rgba(157, 78, 221, 0.4);
- --glow-green:rgba(6, 255, 165, 0.4);
 }
 
-* {
- margin: 0;
- padding: 0;
- box-sizing: border-box;
-}
+*{box-sizing:border-box}
 
 body{
- font-family:'Inter',sans-serif;
- background:var(--bg);
- background-image:
-  radial-gradient(circle at 15% 20%, var(--glow-purple) 0%, transparent 40%),
-  radial-gradient(circle at 85% 80%, var(--glow-cyan) 0%, transparent 40%),
-  radial-gradient(circle at 50% 50%, var(--glow-green) 0%, transparent 60%);
+ font-family:Inter,Arial;
+ background:radial-gradient(circle at 15% 20%, rgba(157,78,221,.35), transparent 40%),
+            radial-gradient(circle at 85% 80%, rgba(0,229,255,.35), transparent 40%),
+            var(--bg);
  color:var(--text);
- min-height:100vh;
  padding:20px;
 }
 
-.header{
- text-align:center;
- margin-bottom:40px;
-}
-
+.header{text-align:center;margin-bottom:30px}
 h1{
- font-size:2.8rem;
- font-weight:700;
- background:linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+ font-size:2.6rem;
+ background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));
  -webkit-background-clip:text;
  -webkit-text-fill-color:transparent;
- background-clip:text;
- margin-bottom:8px;
- letter-spacing:-1px;
- text-shadow:0 0 30px var(--glow-cyan);
 }
 
-.subtitle{
- color:var(--muted);
- font-size:1rem;
- font-weight:500;
-}
+.subtitle{color:var(--muted)}
 
 .controls-container{
  max-width:1400px;
  margin:0 auto 30px;
  background:var(--card);
- border:1px solid var(--border);
+ padding:20px;
  border-radius:16px;
- padding:25px 30px;
- box-shadow:0 4px 20px rgba(0,0,0,0.3);
+ border:1px solid var(--border);
 }
 
 .controls{
  display:grid;
  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
  gap:20px;
- align-items:end;
 }
 
-.control-group{
- display:flex;
- flex-direction:column;
- gap:10px;
-}
+.control-group{display:flex;flex-direction:column;gap:8px}
 
-.control-label{
- font-size:0.8rem;
- text-transform:uppercase;
- letter-spacing:1px;
+label{
  color:var(--accent);
+ font-size:.75rem;
  font-weight:700;
- display:flex;
- align-items:center;
- gap:6px;
-}
-
-.control-label::before{
- content:'';
- width:4px;
- height:14px;
- background:linear-gradient(180deg, var(--accent), var(--accent2));
- border-radius:2px;
-}
-
-input[type="file"]{
- display:none;
-}
-
-.file-upload-btn{
- display:inline-flex;
- align-items:center;
- gap:10px;
- background:linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
- color:white;
- padding:12px 24px;
- border-radius:12px;
- font-weight:600;
- font-size:0.95rem;
- cursor:pointer;
- border:none;
- transition:all 0.3s ease;
- box-shadow:0 4px 15px rgba(0, 217, 255, 0.3);
-}
-
-.file-upload-btn:hover{
- transform:translateY(-2px);
- box-shadow:0 6px 25px rgba(0, 217, 255, 0.5);
-}
-
-.file-upload-btn::before{
- content:'📁';
- font-size:1.2rem;
+ text-transform:uppercase;
 }
 
 select{
- background:rgba(21, 30, 61, 0.9);
- color:var(--text);
+ background:#111b2e;
+ color:#fff;
  border:2px solid var(--border);
- padding:12px 16px;
- border-radius:12px;
- font-size:0.95rem;
- font-weight:500;
+ border-radius:10px;
+ padding:10px;
  cursor:pointer;
- transition:all 0.3s ease;
- backdrop-filter:blur(10px);
- appearance:none;
- background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300D9FF' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
- background-repeat:no-repeat;
- background-position:right 12px center;
- padding-right:40px;
 }
 
 select[multiple]{
- background-image:none;
- padding-right:16px;
-}
-
-select:hover{
+ min-height:130px;
  border-color:var(--accent);
- box-shadow:0 0 0 3px rgba(0, 217, 255, 0.1);
-}
-
-select:focus{
- outline:none;
- border-color:var(--accent);
- box-shadow:0 0 0 3px rgba(0, 217, 255, 0.2);
-}
-
-select option{
- background:var(--card);
- color:var(--text);
- padding:10px;
-}
-
-select option:checked{
- background:linear-gradient(90deg, var(--accent2), var(--accent));
- color:white;
 }
 
 .dashboard{
  max-width:1600px;
- margin:0 auto;
+ margin:auto;
  display:grid;
- grid-template-columns:repeat(3, 1fr);
- gap:25px;
+ grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+ gap:24px;
 }
 
 .card{
- background:linear-gradient(135deg, rgba(13, 21, 37, 0.9) 0%, rgba(17, 27, 46, 0.9) 100%);
+ background:linear-gradient(135deg,#0d1525,#111b2e);
+ padding:20px;
+ border-radius:18px;
  border:1px solid var(--border);
- border-radius:20px;
- padding:25px;
- box-shadow:
-  0 8px 32px rgba(0, 0, 0, 0.6),
-  inset 0 1px 0 rgba(255, 255, 255, 0.05);
- transition:all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
- position:relative;
- overflow:hidden;
- backdrop-filter:blur(10px);
-}
-
-.card::before{
- content:'';
- position:absolute;
- top:0;
- left:0;
- right:0;
- height:2px;
- background:linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
- opacity:0;
- transition:opacity 0.3s ease;
-}
-
-.card::after{
- content:'';
- position:absolute;
- top:-50%;
- left:-50%;
- width:200%;
- height:200%;
- background:radial-gradient(circle, var(--glow-cyan) 0%, transparent 70%);
- opacity:0;
- transition:opacity 0.4s ease;
- pointer-events:none;
-}
-
-.card:hover{
- transform:translateY(-8px) scale(1.02);
- box-shadow:
-  0 20px 60px rgba(0, 229, 255, 0.3),
-  0 0 40px rgba(0, 229, 255, 0.2),
-  inset 0 1px 0 rgba(255, 255, 255, 0.1);
- border-color:var(--accent);
-}
-
-.card:hover::before{
- opacity:1;
-}
-
-.card:hover::after{
- opacity:0.03;
 }
 
 .card h3{
- font-size:1.1rem;
- color:var(--text);
- margin:0 0 20px 0;
- font-weight:600;
- letter-spacing:0.3px;
- display:flex;
- align-items:center;
- gap:10px;
+ margin-bottom:15px;
+ font-size:1.05rem;
 }
 
-.card h3::before{
- content:'';
- width:6px;
- height:20px;
- background:linear-gradient(180deg, var(--accent), var(--accent2));
- border-radius:3px;
-}
-
-canvas{
- filter:drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
-}
-
-@media (max-width: 1400px) {
- .dashboard{
-  grid-template-columns:repeat(2, 1fr);
- }
-}
-
-@media (max-width: 900px) {
- .dashboard{
-  grid-template-columns:1fr;
- }
- .controls{
-  grid-template-columns:1fr;
- }
- h1{
-  font-size:2rem;
- }
-}
+canvas{height:320px !important}
 </style>
 </head>
+
 <body>
+
 <div class="header">
  <h1>⚡ Utilities Performance Dashboard</h1>
  <p class="subtitle">Real-time Performance Monitoring & Analytics</p>
@@ -299,17 +114,13 @@ canvas{
 <div class="controls-container">
  <div class="controls">
   <div class="control-group">
-   <label class="control-label">Upload Dataset</label>
-   <label for="fileInput" class="file-upload-btn">Choose CSV File</label>
-   <input type="file" id="fileInput" accept=".csv">
+   <label>Project (Multi-Select)</label>
+   <select id="projectSelect" multiple></select>
   </div>
+
   <div class="control-group">
-   <label class="control-label">Project Filter</label>
-   <select id="projectSelect"><option value="All">All Projects</option></select>
-  </div>
-  <div class="control-group">
-   <label class="control-label">Year Selection</label>
-   <select id="yearSelect" multiple size="4"></select>
+   <label>Year (Multi-Select)</label>
+   <select id="yearSelect" multiple></select>
   </div>
  </div>
 </div>
@@ -318,632 +129,192 @@ canvas{
 
 <script>
 Chart.register(ChartDataLabels);
-Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.family = "Inter";
 
 const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const colorPalette=[
- {bg:"rgba(0, 229, 255, 0.85)", border:"#00E5FF", glow:"rgba(0, 229, 255, 0.5)"},
- {bg:"rgba(157, 78, 221, 0.85)", border:"#9D4EDD", glow:"rgba(157, 78, 221, 0.5)"},
- {bg:"rgba(6, 255, 165, 0.85)", border:"#06FFA5", glow:"rgba(6, 255, 165, 0.5)"},
- {bg:"rgba(255, 184, 0, 0.85)", border:"#FFB800", glow:"rgba(255, 184, 0, 0.5)"},
- {bg:"rgba(255, 59, 109, 0.85)", border:"#FF3B6D", glow:"rgba(255, 59, 109, 0.5)"},
- {bg:"rgba(99, 102, 241, 0.85)", border:"#6366F1", glow:"rgba(99, 102, 241, 0.5)"}
-];
+const colors=["#00E5FF","#9D4EDD","#06FFA5","#FFB800","#FF3B6D","#6366F1"];
 
-let rawData=[],charts=[],selectedYears=[];
+let rawData=[],charts=[];
+let selectedYears=[],selectedProjects=[];
 
-// Auto-load CSV from GitHub Pages
-window.onload = function() {
-    fetch('data.csv')
-        .then(response => response.text())
-        .then(csvText => {
-            loadCSV(csvText);
-        })
-        .catch(error => {
-            console.error('Error loading CSV:', error);
-            // Fallback: show file upload option
-            document.querySelector('.controls-container').style.display = 'block';
-        });
+/* ---------- CSV SAFE PARSER ---------- */
+function parseCSV(text){
+ const rows=text.trim().split("\n");
+ const headers=rows[0].split(",").map(h=>h.trim());
+ return rows.slice(1).map(r=>{
+  const vals=r.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+  let o={};
+  headers.forEach((h,i)=>{
+   let v=vals[i]||"";
+   o[h]=v.replace(/^"|"$/g,"").trim();
+  });
+  return o;
+ });
+}
+
+/* ---------- LOAD CSV ---------- */
+fetch("data.csv")
+ .then(r=>r.text())
+ .then(t=>{
+  rawData=parseCSV(t);
+  initFilters();
+  render();
+ });
+
+/* ---------- MULTI-CLICK ENABLE ---------- */
+function enableClickMultiSelect(sel){
+ [...sel.options].forEach(o=>{
+  o.addEventListener("mousedown",e=>{
+   e.preventDefault();
+   o.selected=!o.selected;
+   sel.dispatchEvent(new Event("change"));
+  });
+ });
+}
+
+/* ---------- INIT FILTERS ---------- */
+function initFilters(){
+ projectSelect.innerHTML="";
+ [...new Set(rawData.map(d=>d["Project name"]))].forEach(p=>{
+  projectSelect.innerHTML+=`<option value="${p}" selected>${p}</option>`;
+ });
+
+ yearSelect.innerHTML="";
+ [...new Set(rawData.map(d=>parseInt(d["Date"].match(/\d{2,4}$/)[0])))]
+  .sort()
+  .forEach(y=>{
+   yearSelect.innerHTML+=`<option value="${y}" selected>${y}</option>`;
+ });
+
+ selectedProjects=[...projectSelect.options].map(o=>o.value);
+ selectedYears=[...yearSelect.options].map(o=>+o.value);
+
+ enableClickMultiSelect(projectSelect);
+ enableClickMultiSelect(yearSelect);
+}
+
+projectSelect.onchange=()=>{
+ selectedProjects=[...projectSelect.selectedOptions].map(o=>o.value);
+ render();
 };
 
-// Hide file upload controls initially
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelector('.controls-container').style.display = 'none';
-});
-
-
-fileInput.onchange=e=>{
- const r=new FileReader();
- r.onload=()=>loadCSV(r.result);
- r.readAsText(e.target.files[0]);
- e.target.nextElementSibling.textContent = `📄 ${e.target.files[0].name}`;
-};
-
-projectSelect.onchange=render;
 yearSelect.onchange=()=>{
  selectedYears=[...yearSelect.selectedOptions].map(o=>+o.value);
  render();
 };
 
-function loadCSV(t){
- const rows=t.trim().split("\n");
- const h=rows[0].split(",");
- rawData=rows.slice(1).map(r=>{
-  const c=r.split(",");
-  let o={};h.forEach((x,i)=>o[x.trim()]=c[i]);return o;
- });
- projectSelect.innerHTML='<option value="All">All Projects</option>';
- [...new Set(rawData.map(d=>d["Project name"]))].forEach(p=>{
-  projectSelect.innerHTML+=`<option>${p}</option>`;
- });
- const years=[...new Set(rawData.map(d=>+("20"+d["Date"].split("-")[1])))].sort();
- yearSelect.innerHTML=years.map(y=>`<option selected value="${y}">${y}</option>`).join("");
- selectedYears=years;
- render();
-}
-
+/* ---------- RENDER ---------- */
 function render(){
- if(selectedYears.length===0)return;
  charts.forEach(c=>c.destroy());
- charts=[];dashboard.innerHTML="";
- const p=projectSelect.value;
- const d=p==="All"?rawData:rawData.filter(x=>x["Project name"]===p);
- 
- expectedP50VsActual(d,p);
- actualMWhWithGTI(d,p);
- yearOverYearComparison(d,p);
- wcAchievedYoY(d,p);
- wcNOCYoY(d,p);
- actGAComparison(d,p);
- actPAComparison(d,p);
+ charts=[];
+ dashboard.innerHTML="";
+
+ const data=rawData.filter(d=>{
+  const y=parseInt(d["Date"].match(/\d{2,4}$/)[0]);
+  return selectedYears.includes(y) &&
+         selectedProjects.includes(d["Project name"]);
+ });
+
+ expectedVsActual(data);
+ actualVsGTI(data);
 }
 
-function expectedP50VsActual(data,proj){
- const allMonths = months;
- const yearColors = {};
- 
- selectedYears.forEach((yr, i) => {
-  yearColors[yr] = colorPalette[i % colorPalette.length];
- });
- 
- const p50Data = {};
- const actData = {};
- 
- selectedYears.forEach(yr => {
-  p50Data[yr] = {};
-  actData[yr] = {};
- });
- 
- data.forEach(d => {
-  let [m, y] = d["Date"].split("-");
-  const year = +("20" + y);
-  if (!selectedYears.includes(year)) return;
-  
-  let p50 = parseFloat(d["Expected P50 MWh"]);
-  let act = parseFloat(d["Actual MWh"]);
-  
-  if (!isNaN(p50)) p50Data[year][m] = (p50Data[year][m] || 0) + p50;
-  if (!isNaN(act)) actData[year][m] = (actData[year][m] || 0) + act;
- });
- 
- const labels = [];
- const datasets = [];
- 
- selectedYears.forEach((yr, idx) => {
-  const color = yearColors[yr];
-  
-  datasets.push({
-   label: `Expected P50 ${yr}`,
-   data: allMonths.map(m => p50Data[yr][m] || null),
-   backgroundColor: color.bg.replace('0.8', '0.5'),
-   borderColor: color.border,
-   borderWidth: 2,
-   barPercentage: 0.8,
-   categoryPercentage: 0.9
-  });
-  
-  datasets.push({
-   label: `Actual ${yr}`,
-   data: allMonths.map(m => actData[yr][m] || null),
-   backgroundColor: color.bg,
-   borderColor: color.border,
-   borderWidth: 2,
-   barPercentage: 0.8,
-   categoryPercentage: 0.9
-  });
- });
- 
- addGroupedBarChart("Expected P50 vs Actual MWh", datasets);
-}
-
-function actualMWhWithGTI(data,proj){
+/* ---------- CHARTS ---------- */
+function expectedVsActual(data){
  const datasets=[];
- const mwhDatasets=[];
- const gtiDatasets=[];
- 
  selectedYears.forEach((yr,i)=>{
-  const mwhVals={},gtiVals={},gtiCounts={};
+  let p50={},act={};
   data.forEach(d=>{
-   let [m,y]=d["Date"].split("-");
+   const [m,y]=d["Date"].split("-");
    if(+("20"+y)!==yr)return;
-   let mwh=parseFloat(d["Actual MWh"]);
-   let gti=parseFloat(d["Actual GTI"]);
-   if(!isNaN(mwh))mwhVals[m]=(mwhVals[m]||0)+mwh;
-   if(!isNaN(gti)){
-    gtiVals[m]=(gtiVals[m]||0)+gti;
-    gtiCounts[m]=(gtiCounts[m]||0)+1;
+   p50[m]=(p50[m]||0)+(+d["Expected P50 MWh"]||0);
+   act[m]=(act[m]||0)+(+d["Actual MWh"]||0);
+  });
+
+  datasets.push({
+   label:`P50 ${yr}`,
+   data:months.map(m=>p50[m]||null),
+   backgroundColor:colors[i%colors.length]+"88"
+  });
+
+  datasets.push({
+   label:`Actual ${yr}`,
+   data:months.map(m=>act[m]||null),
+   backgroundColor:colors[i%colors.length]
+  });
+ });
+
+ addChart("Expected P50 vs Actual MWh","bar",datasets);
+}
+
+function actualVsGTI(data){
+ const bar=[],line=[];
+ selectedYears.forEach((yr,i)=>{
+  let mwh={},gti={},cnt={};
+  data.forEach(d=>{
+   const [m,y]=d["Date"].split("-");
+   if(+("20"+y)!==yr)return;
+   mwh[m]=(mwh[m]||0)+(+d["Actual MWh"]||0);
+   if(d["Actual GTI"]){
+    gti[m]=(gti[m]||0)+(+d["Actual GTI"]);
+    cnt[m]=(cnt[m]||0)+1;
    }
   });
-  
-  const colorIdx = i % colorPalette.length;
-  
-  mwhDatasets.push({
+
+  bar.push({
    label:`MWh ${yr}`,
-   data:months.map(m=>mwhVals[m]??null),
-   backgroundColor:colorPalette[colorIdx].bg,
-   borderColor:colorPalette[colorIdx].border,
-   borderWidth:2,
-   barPercentage: 0.85,
-   categoryPercentage: 0.8
+   data:months.map(m=>mwh[m]||null),
+   backgroundColor:colors[i%colors.length]
   });
-  
-  gtiDatasets.push({
-   label:`GTI ${yr}${proj==="All"?" (Avg)":""}`,
-   data:months.map(m=>gtiCounts[m]?gtiVals[m]/gtiCounts[m]:null),
-   borderColor:colorPalette[colorIdx].border,
-   backgroundColor:colorPalette[colorIdx].bg.replace('0.8', '0.2'),
-   tension:.4,
-   borderWidth:3,
-   pointRadius:6,
-   pointHoverRadius:8,
-   pointBackgroundColor:colorPalette[colorIdx].border,
-   fill:true
+
+  line.push({
+   label:`GTI ${yr}`,
+   data:months.map(m=>cnt[m]?gti[m]/cnt[m]:null),
+   borderColor:colors[i%colors.length],
+   yAxisID:"y1",
+   tension:.4
   });
  });
- 
- addDualAxisChart("Actual MWh & GTI Comparison", mwhDatasets, gtiDatasets);
+
+ addDualChart("Actual MWh & GTI",bar,line);
 }
 
-function wcAchievedYoY(data,proj){
- const datasets=[];
- selectedYears.forEach((yr,i)=>{
-  const vals={},counts={};
-  data.forEach(d=>{
-   let [m,y]=d["Date"].split("-");
-   if(+("20"+y)!==yr)return;
-   let v=parseFloat(d["WC Achieved"]);
-   if(!isNaN(v)){
-    vals[m]=(vals[m]||0)+v;
-    counts[m]=(counts[m]||0)+1;
-   }
-  });
-  
-  const monthData=months.map(m=>counts[m]?vals[m]/counts[m]:null);
-  const colorIdx = i % colorPalette.length;
-  
-  datasets.push({
-   label:`WC Achieved ${yr}${proj==="All"?" (Avg)":""}`,
-   data:monthData,
-   borderColor:colorPalette[colorIdx].border,
-   backgroundColor:colorPalette[colorIdx].bg.replace('0.8', '0.2'),
-   tension:.4,
-   borderWidth:3,
-   pointRadius:6,
-   pointHoverRadius:8,
-   pointBackgroundColor:colorPalette[colorIdx].border,
-   fill:true,
-   datalabels:{
-    display:true,
-    align:'top',
-    offset:8,
-    formatter:(val)=>{
-     if(val===null)return '';
-     const delta=val-100;
-     return delta>=0?`+${delta.toFixed(1)}%`:`${delta.toFixed(1)}%`;
-    },
-    color:(ctx)=>{
-     const val=ctx.dataset.data[ctx.dataIndex];
-     return val>=100?'#00F5A0':'#FF4757';
-    },
-    font:{weight:'bold',size:11}
-   }
-  });
- });
- addChart("WC Achieved (Year over Year)",datasets,false,true);
-}
-
-function wcNOCYoY(data,proj){
- const datasets=[];
- selectedYears.forEach((yr,i)=>{
-  const vals={},counts={};
-  data.forEach(d=>{
-   let [m,y]=d["Date"].split("-");
-   if(+("20"+y)!==yr)return;
-   let v=parseFloat(d["WC_NOC"]);
-   if(!isNaN(v)){
-    vals[m]=(vals[m]||0)+v;
-    counts[m]=(counts[m]||0)+1;
-   }
-  });
-  
-  const monthData=months.map(m=>counts[m]?vals[m]/counts[m]:null);
-  const colorIdx = i % colorPalette.length;
-  
-  datasets.push({
-   label:`WC_NOC ${yr}${proj==="All"?" (Avg)":""}`,
-   data:monthData,
-   borderColor:colorPalette[colorIdx].border,
-   backgroundColor:colorPalette[colorIdx].bg.replace('0.85', '0.2'),
-   tension:.4,
-   borderWidth:3,
-   pointRadius:6,
-   pointHoverRadius:8,
-   pointBackgroundColor:colorPalette[colorIdx].border,
-   fill:true,
-   datalabels:{
-    display:true,
-    align:'top',
-    offset:8,
-    formatter:(val)=>{
-     if(val===null)return '';
-     const delta=val-100;
-     return delta>=0?`+${delta.toFixed(1)}%`:`${delta.toFixed(1)}%`;
-    },
-    color:(ctx)=>{
-     const val=ctx.dataset.data[ctx.dataIndex];
-     return val>=100?'#00F5A0':'#FF4757';
-    },
-    font:{weight:'bold',size:11}
-   }
-  });
- });
- addChart("WC_NOC (Year over Year)",datasets,false,true);
-}
-
-function yearOverYearComparison(data,proj){
- if(selectedYears.length < 2) return;
- 
- const sortedYears = [...selectedYears].sort();
- const currentYear = sortedYears[sortedYears.length - 1];
- const previousYear = sortedYears[sortedYears.length - 2];
- 
- const currentMWh = {};
- const previousMWh = {};
- const currentGTI = {};
- const previousGTI = {};
- const gtiCounts = {current: {}, previous: {}};
- 
- data.forEach(d => {
-  let [m, y] = d["Date"].split("-");
-  const year = +("20" + y);
-  
-  if(year === currentYear) {
-   let mwh = parseFloat(d["Actual MWh"]);
-   let gti = parseFloat(d["Actual GTI"]);
-   if(!isNaN(mwh)) currentMWh[m] = (currentMWh[m] || 0) + mwh;
-   if(!isNaN(gti)) {
-    currentGTI[m] = (currentGTI[m] || 0) + gti;
-    gtiCounts.current[m] = (gtiCounts.current[m] || 0) + 1;
-   }
-  } else if(year === previousYear) {
-   let mwh = parseFloat(d["Actual MWh"]);
-   let gti = parseFloat(d["Actual GTI"]);
-   if(!isNaN(mwh)) previousMWh[m] = (previousMWh[m] || 0) + mwh;
-   if(!isNaN(gti)) {
-    previousGTI[m] = (previousGTI[m] || 0) + gti;
-    gtiCounts.previous[m] = (gtiCounts.previous[m] || 0) + 1;
-   }
-  }
- });
- 
- const barDatasets = [
-  {
-   label: `Actual MWh ${previousYear}`,
-   data: months.map(m => previousMWh[m] || null),
-   backgroundColor: colorPalette[0].bg.replace('0.85', '0.5'),
-   borderColor: colorPalette[0].border,
-   borderWidth: 2,
-   barPercentage: 0.85,
-   categoryPercentage: 0.8
-  },
-  {
-   label: `Actual MWh ${currentYear}`,
-   data: months.map(m => currentMWh[m] || null),
-   backgroundColor: colorPalette[0].bg,
-   borderColor: colorPalette[0].border,
-   borderWidth: 2,
-   barPercentage: 0.85,
-   categoryPercentage: 0.8
-  }
- ];
- 
- const lineDatasets = [
-  {
-   label: `GTI ${previousYear}${proj==="All"?" (Avg)":""}`,
-   data: months.map(m => gtiCounts.previous[m] ? previousGTI[m] / gtiCounts.previous[m] : null),
-   borderColor: colorPalette[1].border,
-   backgroundColor: colorPalette[1].bg.replace('0.85', '0.2'),
-   tension: .4,
-   borderWidth: 3,
-   pointRadius: 6,
-   pointHoverRadius: 8,
-   pointBackgroundColor: colorPalette[1].border,
-   fill: true
-  },
-  {
-   label: `GTI ${currentYear}${proj==="All"?" (Avg)":""}`,
-   data: months.map(m => gtiCounts.current[m] ? currentGTI[m] / gtiCounts.current[m] : null),
-   borderColor: colorPalette[2].border,
-   backgroundColor: colorPalette[2].bg.replace('0.85', '0.2'),
-   tension: .4,
-   borderWidth: 3,
-   pointRadius: 6,
-   pointHoverRadius: 8,
-   pointBackgroundColor: colorPalette[2].border,
-   fill: true
-  }
- ];
- 
- addDualAxisChart(`YoY Comparison: ${previousYear} vs ${currentYear}`, barDatasets, lineDatasets);
-}
-
-function actGAComparison(data,proj){
- const threshold=["AWS","SECI-9"].includes(proj)?99.5:99.4;
- const datasets=[];
- selectedYears.forEach((yr,i)=>{
-  const vals={},counts={};
-  data.forEach(d=>{
-   let [m,y]=d["Date"].split("-");
-   if(+("20"+y)!==yr)return;
-   let v=parseFloat(d["Act. GA (%)"]);
-   if(!isNaN(v)){
-    vals[m]=(vals[m]||0)+v;
-    counts[m]=(counts[m]||0)+1;
-   }
-  });
-  const monthData=months.map(m=>counts[m]?vals[m]/counts[m]:null);
-  const colorIdx = i % colorPalette.length;
-  
-  datasets.push({
-   label:`GA ${yr}${proj==="All"?" (Avg)":""}`,
-   data:monthData,
-   borderColor:colorPalette[colorIdx].border,
-   backgroundColor:colorPalette[colorIdx].bg.replace('0.8', '0.2'),
-   segment:{
-    borderColor:ctx=>{
-     const v=ctx.p1.parsed.y;
-     return v<threshold?"#FF4757":colorPalette[colorIdx].border;
-    },
-    borderWidth:ctx=>{
-     const v=ctx.p1.parsed.y;
-     return v<threshold?4:3;
-    }
-   },
-   tension:.4,
-   borderWidth:3,
-   pointRadius:6,
-   pointHoverRadius:8,
-   pointBackgroundColor:monthData.map(v=>v!==null&&v<threshold?"#FF4757":colorPalette[colorIdx].border),
-   pointBorderColor:monthData.map(v=>v!==null&&v<threshold?"#FF4757":colorPalette[colorIdx].border),
-   fill:true
-  });
- });
- addChart(`Act. GA (%) - Threshold: ${threshold}%${proj==="All"?" (Avg)":""}`,datasets,true);
-}
-
-function actPAComparison(data,proj){
- const threshold=["AWS","SECI-9"].includes(proj)?99.5:99.4;
- const datasets=[];
- selectedYears.forEach((yr,i)=>{
-  const vals={},counts={};
-  data.forEach(d=>{
-   let [m,y]=d["Date"].split("-");
-   if(+("20"+y)!==yr)return;
-   let v=parseFloat(d["Act. PA (%)"]);
-   if(!isNaN(v)){
-    vals[m]=(vals[m]||0)+v;
-    counts[m]=(counts[m]||0)+1;
-   }
-  });
-  const monthData=months.map(m=>counts[m]?vals[m]/counts[m]:null);
-  const colorIdx = i % colorPalette.length;
-  
-  datasets.push({
-   label:`PA ${yr}${proj==="All"?" (Avg)":""}`,
-   data:monthData,
-   borderColor:colorPalette[colorIdx].border,
-   backgroundColor:colorPalette[colorIdx].bg.replace('0.8', '0.2'),
-   segment:{
-    borderColor:ctx=>{
-     const v=ctx.p1.parsed.y;
-     return v<threshold?"#FF4757":colorPalette[colorIdx].border;
-    },
-    borderWidth:ctx=>{
-     const v=ctx.p1.parsed.y;
-     return v<threshold?4:3;
-    }
-   },
-   tension:.4,
-   borderWidth:3,
-   pointRadius:6,
-   pointHoverRadius:8,
-   pointBackgroundColor:monthData.map(v=>v!==null&&v<threshold?"#FF4757":colorPalette[colorIdx].border),
-   pointBorderColor:monthData.map(v=>v!==null&&v<threshold?"#FF4757":colorPalette[colorIdx].border),
-   fill:true
-  });
- });
- addChart(`Act. PA (%) - Threshold: ${threshold}%${proj==="All"?" (Avg)":""}`,datasets,true);
-}
-
-function addChart(title,datasets,limit100=false,showLabels=false){
+/* ---------- HELPERS ---------- */
+function addChart(title,type,datasets){
  const c=document.createElement("div");
  c.className="card";
  c.innerHTML=`<h3>${title}</h3><canvas></canvas>`;
  dashboard.appendChild(c);
+
  charts.push(new Chart(c.querySelector("canvas"),{
-  type:"line",
+  type,
   data:{labels:months,datasets},
-  options:{
-   responsive:true,
-   maintainAspectRatio:true,
-   plugins:{
-    legend:{
-     labels:{
-      color:"#E8EAED",
-      font:{size:12,weight:'600'},
-      padding:15,
-      usePointStyle:true,
-      pointStyle:'circle'
-     },
-     position:'top'
-    },
-    datalabels:{display:showLabels},
-    tooltip:{
-     backgroundColor:'rgba(21, 30, 61, 0.95)',
-     titleColor:'#00D9FF',
-     bodyColor:'#E8EAED',
-     borderColor:'#252E4A',
-     borderWidth:1,
-     padding:12,
-     displayColors:true,
-     boxPadding:6
-    }
-   },
-   scales:{
-    x:{
-     ticks:{color:"#8B92AB",font:{size:11,weight:'500'}},
-     grid:{color:"rgba(37, 46, 74, 0.5)",lineWidth:1}
-    },
-    y:{
-     max:limit100?100:undefined,
-     ticks:{color:"#8B92AB",font:{size:11,weight:'500'}},
-     grid:{color:"rgba(37, 46, 74, 0.5)",lineWidth:1}
-    }
-   }
-  }
+  options:{responsive:true,maintainAspectRatio:false}
  }));
 }
 
-function addGroupedBarChart(title,datasets){
+function addDualChart(title,bars,lines){
  const c=document.createElement("div");
  c.className="card";
  c.innerHTML=`<h3>${title}</h3><canvas></canvas>`;
  dashboard.appendChild(c);
- charts.push(new Chart(c.querySelector("canvas"),{
-  type:"bar",
-  data:{labels:months,datasets},
-  options:{
-   responsive:true,
-   maintainAspectRatio:true,
-   interaction: {
-    mode: 'index',
-    intersect: false
-   },
-   plugins:{
-    legend:{
-     labels:{
-      color:"#E8EAED",
-      font:{size:12,weight:'600'},
-      padding:15,
-      usePointStyle:true,
-      pointStyle:'rect'
-     },
-     position:'top'
-    },
-    datalabels:{display:false},
-    tooltip:{
-     backgroundColor:'rgba(21, 30, 61, 0.95)',
-     titleColor:'#00D9FF',
-     bodyColor:'#E8EAED',
-     borderColor:'#252E4A',
-     borderWidth:1,
-     padding:12,
-     displayColors:true,
-     boxPadding:6
-    }
-   },
-   scales:{
-    x:{
-     ticks:{color:"#8B92AB",font:{size:11,weight:'500'}},
-     grid:{display:false}
-    },
-    y:{
-     ticks:{color:"#8B92AB",font:{size:11,weight:'500'}},
-     grid:{color:"rgba(37, 46, 74, 0.5)",lineWidth:1},
-     title:{display:true,text:"MWh",color:"#00D9FF",font:{size:12,weight:'700'}}
-    }
-   }
-  }
- }));
-}
 
-function addDualAxisChart(title, barDatasets, lineDatasets){
- const c=document.createElement("div");
- c.className="card";
- c.innerHTML=`<h3>${title}</h3><canvas></canvas>`;
- dashboard.appendChild(c);
- 
- const combinedDatasets = [
-  ...barDatasets.map(ds => ({...ds, type: 'bar', yAxisID: 'y'})),
-  ...lineDatasets.map(ds => ({...ds, type: 'line', yAxisID: 'y1'}))
- ];
- 
  charts.push(new Chart(c.querySelector("canvas"),{
-  type:"bar",
-  data:{labels:months,datasets:combinedDatasets},
+  data:{labels:months,datasets:[
+   ...bars.map(b=>({...b,type:"bar",yAxisID:"y"})),
+   ...lines.map(l=>({...l,type:"line"}))
+  ]},
   options:{
    responsive:true,
-   maintainAspectRatio:true,
-   interaction: {
-    mode: 'index',
-    intersect: false
-   },
-   plugins:{
-    legend:{
-     labels:{
-      color:"#E8EAED",
-      font:{size:12,weight:'600'},
-      padding:15,
-      usePointStyle:true,
-      pointStyle:'circle'
-     },
-     position:'top'
-    },
-    datalabels:{display:false},
-    tooltip:{
-     backgroundColor:'rgba(21, 30, 61, 0.95)',
-     titleColor:'#00D9FF',
-     bodyColor:'#E8EAED',
-     borderColor:'#252E4A',
-     borderWidth:1,
-     padding:12,
-     displayColors:true,
-     boxPadding:6
-    }
-   },
+   maintainAspectRatio:false,
    scales:{
-    x:{
-     ticks:{color:"#8B92AB",font:{size:11,weight:'500'}},
-     grid:{display:false}
-    },
-    y:{
-     type:'linear',
-     position:'left',
-     ticks:{color:"#8B92AB",font:{size:11,weight:'500'}},
-     grid:{color:"rgba(37, 46, 74, 0.5)",lineWidth:1},
-     title:{display:true,text:"MWh",color:"#00D9FF",font:{size:12,weight:'700'}}
-    },
-    y1:{
-     type:'linear',
-     position:'right',
-     ticks:{color:"#8B92AB",font:{size:11,weight:'500'}},
-     grid:{display:false},
-     title:{display:true,text:"GTI",color:"#7C3AED",font:{size:12,weight:'700'}}
-    }
+    y:{position:"left"},
+    y1:{position:"right",grid:{drawOnChartArea:false}}
    }
   }
  }));
 }
 </script>
+
 </body>
 </html>
